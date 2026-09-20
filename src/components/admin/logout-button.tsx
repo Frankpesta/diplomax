@@ -23,9 +23,11 @@ export function LogoutButton({
     setIsPending(true);
     try {
       await signOut();
-      router.push("/admin/login");
+    } catch (error) {
+      console.error("Sign out failed", error);
     } finally {
       setIsPending(false);
+      router.push("/admin/login");
     }
   }
 
