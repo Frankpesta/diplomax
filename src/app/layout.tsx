@@ -3,34 +3,43 @@ import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/shared/convex-client-provider";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { I18nProvider } from "@/i18n/provider";
+import { getDictionary, getLocale } from "@/i18n/server";
+import { OG_LOCALE } from "@/i18n/config";
 import { Manrope } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
 const manrope = Manrope({
-  subsets: ["latin"],
+  // latin-ext carries Turkish characters (ğ, ş, ı, İ).
+  subsets: ["latin", "latin-ext"],
   variable: "--font-manrope",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://diplomaxdelivery.com"),
-  title: {
-    template: "%s | Diplomaxdelivery",
-    default: "Diplomaxdelivery — Global Courier & Logistics",
-  },
-  description:
-    "Fast, reliable, and transparent shipment tracking. Track your package in real-time with Diplomaxdelivery.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const { meta } = getDictionary(locale);
+  return {
+    metadataBase: new URL("https://diplomaxdelivery.com"),
+    title: {
+      template: meta.titleTemplate,
+      default: meta.titleDefault,
+    },
+    description: meta.description,
+    openGraph: { locale: OG_LOCALE[locale] },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
   return (
     <ConvexAuthNextjsServerProvider>
       <html
-        lang="en"
+        lang={locale}
         className={`h-full antialiased ${manrope.variable} ${manrope.className}`}
         suppressHydrationWarning
       >
@@ -42,9 +51,11 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <TooltipProvider delay={300}>
-                {children}
-              </TooltipProvider>
+              <I18nProvider locale={locale} dictionary={getDictionary(locale)}>
+                <TooltipProvider delay={300}>
+                  {children}
+                </TooltipProvider>
+              </I18nProvider>
               <Toaster richColors position="top-right" />
             </ThemeProvider>
           </ConvexClientProvider>
@@ -53,4 +64,3 @@ export default function RootLayout({
     </ConvexAuthNextjsServerProvider>
   );
 }
-

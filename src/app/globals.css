@@ -149,3 +149,9 @@ h1, h2, h3 { text-wrap: balance; }
 .parcel-caption { position: absolute; bottom: 0; font-size: 12px; letter-spacing: .1em; color: #ffffff66; }
 .secondary-hero { background-image: radial-gradient(ellipse at 80% 50%, #8cab4930, transparent 70%); }
 
+
+/* Floating WhatsApp launcher: soft expanding ring */
+@keyframes whatsapp-pulse { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(1.55); opacity: 0; } }
+
+/* Keep third-party chat launchers off printed tracking reports */
+@media print { #chatway, [id^="chatway"], iframe[src*="chatway"] { display: none !important; } }

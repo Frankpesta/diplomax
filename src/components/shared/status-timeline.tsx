@@ -17,10 +17,15 @@ const STATUS_ICONS: Record<StatusIconKey, import("lucide-react").LucideIcon> = {
 interface StatusTimelineProps {
   events: StatusTimelineEvent[];
   className?: string;
+  /** Display text for a status; styling still keys off the raw value. */
+  formatStatus?: (status: string) => string;
+  currentLabel?: string;
+  /** BCP 47 locale for timestamps; defaults to the browser's. */
+  dateLocale?: string;
 }
 
 /** Vertical timeline of a shipment's status history, newest first. */
-export function StatusTimeline({ events, className }: StatusTimelineProps) {
+export function StatusTimeline({ events, className, formatStatus = s => s, currentLabel = "Current", dateLocale }: StatusTimelineProps) {
   if (events.length === 0) return null;
 
   const sorted = [...events].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -64,16 +69,16 @@ export function StatusTimeline({ events, className }: StatusTimelineProps) {
                   className="text-sm font-black"
                   style={isCurrent ? { color: style.hex } : undefined}
                 >
-                  {event.status}
+                  {formatStatus(event.status)}
                 </span>
                 {isCurrent && (
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                    Current
+                    {currentLabel}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {new Date(event.createdAt).toLocaleString(undefined, {
+                {new Date(event.createdAt).toLocaleString(dateLocale, {
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}

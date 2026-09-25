@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SERVICES } from "@/data/services";
+import { getService } from "@/data/services";
+import { getDictionary, getLocale } from "@/i18n/server";
 
 export async function generateMetadata({
   params,
@@ -7,10 +8,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const svc = SERVICES[slug];
+  const t = getDictionary(await getLocale());
+  const svc = getService(t, slug);
 
   if (!svc) {
-    return { title: "Service Not Found" };
+    return { title: t.meta.serviceNotFound };
   }
 
   return {

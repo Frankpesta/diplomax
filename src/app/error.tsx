@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
+import { format } from "@/i18n/format";
 
 export default function GlobalError({
   error,
@@ -11,6 +13,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     console.error("[Global Error]", error);
   }, [error]);
@@ -20,14 +23,13 @@ export default function GlobalError({
       <div className="h-14 w-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
         <AlertTriangle className="h-7 w-7 text-red-500" />
       </div>
-      <h1 className="text-2xl font-bold mb-2">Unexpected Error</h1>
+      <h1 className="text-2xl font-bold mb-2">{t.error.title}</h1>
       <p className="text-sm text-muted-foreground mb-6 max-w-md">
-        Something went wrong on our end. Please try refreshing the page. If
-        the issue persists, contact support at support@diplomaxdelivery.com.
+        {t.error.text}
       </p>
       {error.digest && (
         <p className="text-xs font-mono text-muted-foreground/60 mb-4">
-          Reference: {error.digest}
+          {format(t.error.reference, { digest: error.digest })}
         </p>
       )}
       <div className="flex gap-3">
@@ -36,14 +38,14 @@ export default function GlobalError({
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors text-sm"
         >
           <RefreshCw className="h-4 w-4" />
-          Try Again
+          {t.error.retry}
         </button>
         <Link
           href="/"
           className="inline-flex items-center gap-2 border font-semibold px-5 py-2.5 rounded-xl hover:bg-accent transition-colors text-sm"
         >
           <Home className="h-4 w-4" />
-          Go Home
+          {t.error.home}
         </Link>
       </div>
     </div>

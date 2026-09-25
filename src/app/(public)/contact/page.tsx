@@ -9,6 +9,9 @@ import { api } from "@convex/_generated/api";
 import { motion } from "framer-motion";
 import { NavHeader } from "@/components/public/nav-header";
 import { SiteFooter } from "@/components/public/site-footer";
+import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
+import { useI18n } from "@/i18n/provider";
+import { WHATSAPP_DISPLAY, whatsappUrl } from "@/lib/contact";
 import {
   Mail,
   CheckCircle2,
@@ -38,11 +41,7 @@ function FadeUp({
   );
 }
 
-const CONTACT_DETAILS = [
-  { icon: Mail, label: "Shipment support", lines: ["support@diplomaxdelivery.com", "Include your DMD tracking code when contacting us."] },
-  { icon: Send, label: "Planning a delivery?", lines: ["Tell us the collection point, destination, and parcel size using the form."] },
-];
-
+/** Values must match the contact policy enum — they are what the support inbox receives. */
 const SUBJECTS = [
   "General Enquiry",
   "Track a Shipment",
@@ -50,17 +49,19 @@ const SUBJECTS = [
   "Partnership",
   "Technical Support",
   "Other",
-];
+] as const;
 
 const CONTACT_PHOTO =
   "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=85";
 
 export default function ContactPage() {
+  const { t } = useI18n();
+  const c = t.contact;
   const sendContact = useAction(api.emails.sendContactEmail);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [challengeKey, setChallengeKey] = useState(0);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{ name: string; email: string; subject: (typeof SUBJECTS)[number]; message: string }>({
     name: "",
     email: "",
     subject: SUBJECTS[0],
@@ -74,16 +75,16 @@ export default function ContactPage() {
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >
-    ) => setForm((f) => ({ ...f, [field]: e.target.value }));
+    ) => setForm((f) => ({ ...f, [field]: e.target.value }) as typeof f);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
-      setErrorMsg("Please fill in all required fields.");
+      setErrorMsg(c.errorRequired);
       return;
     }
-    if (!turnstileToken) { setErrorMsg("Please complete the verification first."); return; }
+    if (!turnstileToken) { setErrorMsg(c.errorVerification); return; }
     setStatus("sending");
     setErrorMsg("");
     try {
@@ -91,12 +92,17 @@ export default function ContactPage() {
       setStatus("sent");
     } catch {
       setStatus("error");
-      setErrorMsg("Your message could not be accepted. Please check the form, try again later, or email us directly.");
+      setErrorMsg(c.errorFailed);
     } finally {
       setTurnstileToken("");
       setChallengeKey(value => value + 1);
     }
   }
+
+  const contactDetails = [
+    { icon: Mail, label: c.supportLabel, lines: ["support@diplomaxdelivery.com", c.supportHint] },
+    { icon: Send, label: c.planningLabel, lines: [c.planningHint] },
+  ];
 
   const inputCls =
     "w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder:text-muted-foreground/60";
@@ -115,20 +121,19 @@ export default function ContactPage() {
         >
           <div>
             <p className="mb-3 text-sm font-black uppercase text-brand-lime">
-              Get in Touch
+              {c.kicker}
             </p>
             <h1 className="text-5xl font-medium leading-[1.08] tracking-[-.05em] sm:text-6xl">
-              Logistics support without the runaround
+              {c.title}
             </h1>
             <p className="mt-5 text-lg leading-8 text-white/70">
-              Have a question, a large shipment to plan, or a partnership to
-              discuss? Our team responds quickly and keeps the handoff clear.
+              {c.text}
             </p>
           </div>
           <div className="relative h-[360px] w-full overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
             <Image
               src={CONTACT_PHOTO}
-              alt="Support team coordinating shipments"
+              alt={c.photoAlt}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
@@ -143,16 +148,16 @@ export default function ContactPage() {
           {/* Contact details */}
           <div className="lg:col-span-2 space-y-8">
             <FadeUp>
-              <h2 className="text-xl font-bold mb-6">Contact Information</h2>
+              <h2 className="text-xl font-bold mb-6">{c.infoTitle}</h2>
               <div className="space-y-6">
-                {CONTACT_DETAILS.map((c) => (
-                  <div key={c.label} className="flex gap-4">
+                {contactDetails.map((detail) => (
+                  <div key={detail.label} className="flex gap-4">
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <c.icon className="h-5 w-5 text-primary" />
+                      <detail.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <div className="font-semibold text-sm mb-1">{c.label}</div>
-                      {c.lines.map((line) => (
+                      <div className="font-semibold text-sm mb-1">{detail.label}</div>
+                      {detail.lines.map((line) => (
                         <div key={line} className="text-sm text-muted-foreground">
                           {line}
                         </div>
@@ -160,20 +165,32 @@ export default function ContactPage() {
                     </div>
                   </div>
                 ))}
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                    <WhatsAppIcon className="h-5 w-5 text-[#1da851]" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm mb-1">{c.whatsappLabel}</div>
+                    <a href={whatsappUrl(t.whatsapp.message)} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary hover:underline">
+                      {WHATSAPP_DISPLAY}
+                    </a>
+                    <div className="text-sm text-muted-foreground">{c.whatsappHint}</div>
+                  </div>
+                </div>
               </div>
             </FadeUp>
 
             <FadeUp delay={0.1}>
               <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5">
-                <h3 className="font-semibold text-sm mb-2">Track Your Shipment</h3>
+                <h3 className="font-semibold text-sm mb-2">{c.trackTitle}</h3>
                 <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                  Already have a tracking code? Track your shipment instantly without contacting support.
+                  {c.trackText}
                 </p>
                 <Link
                   href="/#track"
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
                 >
-                  Go to Tracker -
+                  {c.trackLink} →
                 </Link>
               </div>
             </FadeUp>
@@ -191,10 +208,11 @@ export default function ContactPage() {
                   <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-5">
                     <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
                   </div>
-                  <h2 className="text-xl font-bold mb-2">Message accepted</h2>
+                  <h2 className="text-xl font-bold mb-2">{c.sentTitle}</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
-                    Thanks for reaching out. Our team will get back to you at{" "}
-                    <strong>{form.email}</strong> as soon as possible.
+                    {c.sentText.split("{email}").map((part, i) => (
+                      <span key={i}>{i > 0 && <strong>{form.email}</strong>}{part}</span>
+                    ))}
                   </p>
                   <button
                     className="mt-6 text-sm text-primary font-semibold hover:underline"
@@ -203,21 +221,21 @@ export default function ContactPage() {
                       setForm({ name: "", email: "", subject: SUBJECTS[0], message: "" });
                     }}
                   >
-                    Send another message
+                    {c.sendAnother}
                   </button>
                 </motion.div>
               ) : (
                 <div className="bg-card border rounded-2xl p-8">
-                  <h2 className="text-xl font-bold mb-6">Send Us a Message</h2>
+                  <h2 className="text-xl font-bold mb-6">{c.formTitle}</h2>
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="contact-name" className="block text-xs font-semibold mb-1.5">
-                          Full Name <span className="text-red-500">*</span>
+                          {c.name} <span className="text-red-500">*</span>
                         </label>
                         <input
                           className={inputCls}
-                          id="contact-name" autoComplete="name" maxLength={100} minLength={2} required placeholder="John Smith"
+                          id="contact-name" autoComplete="name" maxLength={100} minLength={2} required placeholder={c.namePlaceholder}
                           value={form.name}
                           onChange={set("name")}
                           disabled={status === "sending"}
@@ -225,12 +243,12 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <label htmlFor="contact-email" className="block text-xs font-semibold mb-1.5">
-                          Email Address <span className="text-red-500">*</span>
+                          {c.email} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="email"
                           className={inputCls}
-                          id="contact-email" autoComplete="email" maxLength={254} required placeholder="john@example.com"
+                          id="contact-email" autoComplete="email" maxLength={254} required placeholder={c.emailPlaceholder}
                           value={form.email}
                           onChange={set("email")}
                           disabled={status === "sending"}
@@ -239,7 +257,7 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="contact-subject" className="block text-xs font-semibold mb-1.5">Subject</label>
+                      <label htmlFor="contact-subject" className="block text-xs font-semibold mb-1.5">{c.subject}</label>
                       <select id="contact-subject"
                         className={inputCls}
                         value={form.subject}
@@ -247,18 +265,18 @@ export default function ContactPage() {
                         disabled={status === "sending"}
                       >
                         {SUBJECTS.map((s) => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>{c.subjects[s]}</option>
                         ))}
                       </select>
                     </div>
 
                     <div>
                       <label htmlFor="contact-message" className="block text-xs font-semibold mb-1.5">
-                        Message <span className="text-red-500">*</span>
+                        {c.message} <span className="text-red-500">*</span>
                       </label>
                       <textarea id="contact-message"
                         className={`${inputCls} min-h-[140px] resize-none`}
-                        minLength={10} maxLength={5000} required placeholder="Tell us how we can help..."
+                        minLength={10} maxLength={5000} required placeholder={c.messagePlaceholder}
                         value={form.message}
                         onChange={set("message")}
                         disabled={status === "sending"}
@@ -277,11 +295,11 @@ export default function ContactPage() {
                     >
                       {status === "sending" ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+                          <Loader2 className="h-4 w-4 animate-spin" /> {c.sending}
                         </>
                       ) : (
                         <>
-                          <Send className="h-4 w-4" /> Send Message
+                          <Send className="h-4 w-4" /> {c.send}
                         </>
                       )}
                     </button>

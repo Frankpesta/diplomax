@@ -5,7 +5,9 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { NavHeader } from "@/components/public/nav-header";
 import { SiteFooter } from "@/components/public/site-footer";
-import { SERVICE_LIST } from "@/data/services";
+import { getServiceList } from "@/data/services";
+import { useI18n } from "@/i18n/provider";
+import { format } from "@/i18n/format";
 import { ArrowRight, CheckCircle2, Globe, Package, Truck, Zap } from "lucide-react";
 
 const ICONS: Record<string, import("lucide-react").LucideIcon> = { Zap, Package, Truck, Globe };
@@ -39,6 +41,9 @@ function FadeUp({
 }
 
 export default function ServicesPage() {
+  const { t } = useI18n();
+  const p = t.servicesPage;
+  const services = getServiceList(t);
   return (
     <div className="flex min-h-screen flex-col">
       <NavHeader />
@@ -52,21 +57,20 @@ export default function ServicesPage() {
         >
           <div>
             <p className="mb-3 text-sm font-black uppercase text-brand-lime">
-              What We Offer
+              {p.kicker}
             </p>
             <h1 className="text-5xl font-medium leading-[1.08] tracking-[-.05em] sm:text-6xl">
-              Shipping services for every need
+              {p.title}
             </h1>
             <p className="mt-5 text-lg leading-8 text-white/70">
-              From urgent express delivery to full container freight, every
-              service is designed around visibility, speed, and careful handling.
+              {p.text}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="relative h-72 overflow-hidden rounded-xl">
               <Image
                 src={SERVICE_PHOTOS[0]}
-                alt="Courier delivery service"
+                alt={p.photoCourierAlt}
                 fill
                 sizes="(min-width: 1024px) 25vw, 50vw"
                 className="object-cover"
@@ -75,7 +79,7 @@ export default function ServicesPage() {
             <div className="relative mt-10 h-72 overflow-hidden rounded-xl">
               <Image
                 src={SERVICE_PHOTOS[2]}
-                alt="Freight logistics service"
+                alt={p.photoFreightAlt}
                 fill
                 sizes="(min-width: 1024px) 25vw, 50vw"
                 className="object-cover"
@@ -87,7 +91,7 @@ export default function ServicesPage() {
 
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-7xl space-y-16">
-          {SERVICE_LIST.map((svc, i) => {
+          {services.map((svc, i) => {
             const Icon = ICONS[svc.icon] ?? Package;
             const isEven = i % 2 === 0;
             return (
@@ -96,7 +100,7 @@ export default function ServicesPage() {
                   <div className="relative min-h-[320px] overflow-hidden rounded-xl shadow-xl">
                     <Image
                       src={SERVICE_PHOTOS[i]}
-                      alt={`${svc.name} operation`}
+                      alt={format(p.photoAlt, { service: svc.name })}
                       fill
                       sizes="(min-width: 1024px) 50vw, 100vw"
                       className="object-cover"
@@ -131,7 +135,7 @@ export default function ServicesPage() {
                       href={`/services/${svc.slug}`}
                       className="inline-flex items-center gap-2 rounded-lg bg-brand-forest px-5 py-3 text-sm font-black text-white transition-transform hover:-translate-y-0.5"
                     >
-                      View full details <ArrowRight className="h-4 w-4" />
+                      {p.viewDetails} <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
@@ -144,9 +148,9 @@ export default function ServicesPage() {
       <section className="bg-muted/45 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-5xl">
           <FadeUp className="mb-10 text-center">
-            <h2 className="text-3xl font-black">Compare services</h2>
+            <h2 className="text-3xl font-black">{p.compareTitle}</h2>
             <p className="mt-2 text-muted-foreground">
-              Find the right service for your shipment size and timeline.
+              {p.compareText}
             </p>
           </FadeUp>
           <FadeUp>
@@ -155,8 +159,8 @@ export default function ServicesPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-brand-forest text-white">
                     <tr>
-                      <th className="px-5 py-4 text-left font-black">Feature</th>
-                      {SERVICE_LIST.map((service) => (
+                      <th className="px-5 py-4 text-left font-black">{p.compareFeature}</th>
+                      {services.map((service) => (
                         <th key={service.slug} className="px-4 py-4 text-center font-black">
                           {service.name}
                         </th>
@@ -164,13 +168,7 @@ export default function ServicesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {[
-                      ["Delivery Time", "1-2 days", "3-5 days", "Varies", "3-14 days"],
-                      ["Starting Price", "$29.99", "$9.99", "Custom", "$49.99"],
-                      ["Real-time Tracking", "Yes", "Yes", "Yes", "Yes"],
-                      ["Insurance Included", "Yes", "Yes", "Yes", "Yes"],
-                      ["Customs Handling", "No", "No", "Yes", "Yes"],
-                    ].map(([feature, ...values]) => (
+                    {p.compareRows.map(([feature, ...values]) => (
                       <tr key={feature} className="hover:bg-muted/35">
                         <td className="px-5 py-4 font-bold text-muted-foreground">{feature}</td>
                         {values.map((value, index) => (
@@ -191,13 +189,13 @@ export default function ServicesPage() {
       <section className="px-4 py-20 sm:px-6">
         <FadeUp>
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-black">Not sure which service fits?</h2>
+            <h2 className="text-3xl font-black">{p.helpTitle}</h2>
             <p className="mt-3 text-muted-foreground">
-              Our logistics team will help you choose the right option for your shipment.
+              {p.helpText}
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <Link href="/contact" className="rounded-lg bg-brand-lime px-6 py-3 text-sm font-black text-slate-950">
-                Talk to an Expert
+                {p.helpButton}
               </Link>
             </div>
           </div>

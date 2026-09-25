@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback } from "react";
+import { use, useCallback, useMemo } from "react";
 import { isValidTrackingCode } from "@convex/lib/tracking";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -28,6 +28,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getStatusStyle, type StatusIconKey } from "@convex/lib/statusStyles";
+import { useI18n } from "@/i18n/provider";
+import { format } from "@/i18n/format";
 
 const RouteMap = dynamic(
   () => import("@/components/public/route-map").then((m) => m.RouteMap),
@@ -75,21 +77,23 @@ function PulsingDot({ status, size = "md" }: { status: string; size?: "sm" | "md
 
 /** Colored badge with pulsing dot — always shows live shipment.status text */
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useI18n();
   const ind = getIndicatorStyle(status);
   const Icon = ind.icon;
   return (
     <span className={cn("inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-black", ind.bg, ind.text)}>
       <PulsingDot status={status} size="sm" />
       <Icon className="h-4 w-4" />
-      {status}
+      {t.statuses[status] ?? status}
     </span>
   );
 }
 
 /** Plain pill for print — no colors, just text */
 function StatusText({ status }: { status: string }) {
+  const { t } = useI18n();
   return (
-    <span className="font-black text-slate-900 text-sm">{status}</span>
+    <span className="font-black text-slate-900 text-sm">{t.statuses[status] ?? status}</span>
   );
 }
 
@@ -141,6 +145,15 @@ export default function PublicTrackingPage({
   params: Promise<{ trackingCode: string }>;
 }) {
   const { trackingCode } = use(params);
+  const { t, intlLocale } = useI18n();
+  const tr = t.track;
+  const statusLabel = useCallback((status: string) => t.statuses[status] ?? status, [t]);
+  const checkpointLabel = (status: string) => t.checkpointStatuses[status.toLowerCase()] ?? status;
+  const mapLabels = useMemo(() => ({
+    map: tr.mapLabel,
+    recorded: (status: string) => format(tr.mapRecorded, { status: t.checkpointStatuses[status.toLowerCase()] ?? status }),
+    planned: tr.mapPlanned,
+  }), [t, tr]);
   const validCode = isValidTrackingCode(trackingCode);
   const result = useQuery(api.shipments.getShipmentByTrackingCode, validCode ? { trackingCode } : "skip");
   const shipment = validCode ? result : null;
@@ -152,8 +165,8 @@ export default function PublicTrackingPage({
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(trackingCode);
-    toast.success("Tracking code copied!");
-  }, [trackingCode]);
+    toast.success(tr.copied);
+  }, [trackingCode, tr.copied]);
 
   const handleDownloadPDF = useCallback(() => {
     window.print();
@@ -210,11 +223,11 @@ export default function PublicTrackingPage({
           </div>
           <div>
             <div className="text-xl font-black" style={{ color: "#123d32" }}>Diplomaxdelivery</div>
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Shipment Tracking Report</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide">{tr.reportTitle}</div>
           </div>
         </div>
         <div className="text-xs text-slate-400">
-          Printed {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+          {format(tr.printed, { date: new Date().toLocaleDateString(intlLocale, { day: "numeric", month: "long", year: "numeric" }) })}
         </div>
       </div>
 
@@ -237,7 +250,7 @@ export default function PublicTrackingPage({
                   {trackingCode}
                 </span>
                 <span className="hidden text-white/30 sm:inline">·</span>
-                <span className="text-sm font-black text-white">{shipment.status}</span>
+                <span className="text-sm font-black text-white">{statusLabel(shipment.status)}</span>
               </div>
             )}
           </div>
@@ -248,15 +261,15 @@ export default function PublicTrackingPage({
               className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/20 transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
-              Download PDF
+              {tr.downloadPdf}
             </button>
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-xs font-black text-white/80 hover:bg-white/10 transition-colors"
             >
               <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Track Another</span>
-              <span className="sm:hidden">Back</span>
+              <span className="hidden sm:inline">{tr.trackAnother}</span>
+              <span className="sm:hidden">{tr.back}</span>
             </Link>
           </div>
         </div>
@@ -276,18 +289,18 @@ export default function PublicTrackingPage({
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
                 <AlertCircle className="h-10 w-10 text-muted-foreground" />
               </div>
-              <h1 className="text-2xl font-black">Shipment Not Found</h1>
+              <h1 className="text-2xl font-black">{tr.notFoundTitle}</h1>
               <p className="mt-3 max-w-sm text-muted-foreground">
-                No shipment with tracking code{" "}
-                <span className="font-mono font-black text-foreground">{trackingCode}</span> was found.
-                Double-check your code and try again.
+                {tr.notFoundBefore}{" "}
+                <span className="font-mono font-black text-foreground">{trackingCode}</span>{" "}
+                {tr.notFoundAfter}
               </p>
               <Link
                 href="/"
                 className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-forest px-6 py-3 text-sm font-black text-white hover:bg-brand-forest/90 transition-colors"
               >
                 <Home className="h-4 w-4" />
-                Back to Search
+                {tr.backToSearch}
               </Link>
             </motion.div>
           ) : (
@@ -305,7 +318,7 @@ export default function PublicTrackingPage({
                     <div className="flex-1 min-w-0">
                       <div className="mb-1">
                         <span className="font-mono text-xs font-bold tracking-widest text-white/50 uppercase print:text-slate-400">
-                          Tracking Code
+                          {tr.trackingCode}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mb-5 print:mb-2">
@@ -317,7 +330,7 @@ export default function PublicTrackingPage({
                           className="print:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          <span className="sr-only">Copy</span>
+                          <span className="sr-only">{tr.copy}</span>
                         </button>
                       </div>
 
@@ -356,7 +369,7 @@ export default function PublicTrackingPage({
                   {shipment.estimatedDeliveryDate && (
                     <div className="mt-4 print:mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/8 px-4 py-3 print:px-3 print:py-1.5 text-sm w-fit print:border-slate-200 print:bg-slate-50">
                       <Calendar className="h-4 w-4 text-brand-lime shrink-0 print:text-slate-500" />
-                      <span className="text-white/60 print:text-slate-500">Estimated Delivery</span>
+                      <span className="text-white/60 print:text-slate-500">{tr.estimatedDelivery}</span>
                       <span className="font-black text-white print:text-slate-900">{shipment.estimatedDeliveryDate}</span>
                     </div>
                   )}
@@ -365,7 +378,7 @@ export default function PublicTrackingPage({
                   {shipment.dispatchDate && (
                     <div className="mt-2 flex items-center gap-2 text-xs text-white/40 print:text-slate-400">
                       <Clock className="h-3.5 w-3.5" />
-                      Dispatched {shipment.dispatchDate}
+                      {format(tr.dispatched, { date: shipment.dispatchDate })}
                     </div>
                   )}
                 </div>
@@ -379,9 +392,9 @@ export default function PublicTrackingPage({
                 className="rounded-2xl border bg-card p-5 shadow-sm no-break print:shadow-none"
               >
                 <h2 className="mb-4 text-xs font-black uppercase tracking-wide text-muted-foreground">
-                  Tracking History
+                  {tr.history}
                 </h2>
-                <StatusTimeline events={shipment.statusHistory} />
+                <StatusTimeline events={shipment.statusHistory} formatStatus={statusLabel} currentLabel={tr.current} dateLocale={intlLocale} />
               </motion.div>
 
               {/* ── Route map (screen only) ── */}
@@ -393,10 +406,10 @@ export default function PublicTrackingPage({
                   className="print:hidden overflow-hidden rounded-2xl border bg-card shadow-sm"
                 >
                   <div className="px-6 pt-5 pb-3">
-                    <h2 className="text-sm font-black uppercase tracking-wide text-muted-foreground">Recorded route checkpoints</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Updated by our operations team. This is not a live GPS feed; connecting lines illustrate the planned route.</p>
+                    <h2 className="text-sm font-black uppercase tracking-wide text-muted-foreground">{tr.mapTitle}</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tr.mapText}</p>
                   </div>
-                  <RouteMap checkpoints={shipment.checkpoints} height={320} />
+                  <RouteMap checkpoints={shipment.checkpoints} height={320} labels={mapLabels} />
                   <p className="px-6 pb-3 pt-1.5 text-[10px] text-muted-foreground">© OpenStreetMap contributors</p>
                 </motion.div>
               )}
@@ -408,7 +421,7 @@ export default function PublicTrackingPage({
                 transition={{ duration: 0.5, delay: 0.25 }}
                 className="grid grid-cols-1 gap-4 sm:grid-cols-2 no-break"
               >
-                <Card title="Sender">
+                <Card title={tr.sender}>
                   <div className="space-y-1">
                     <p className="text-base font-black print:text-slate-900">{shipment.senderFullName}</p>
                     <p className="text-sm text-muted-foreground print:text-slate-600">{shipment.senderAddress}</p>
@@ -416,7 +429,7 @@ export default function PublicTrackingPage({
                     <p className="text-sm font-semibold text-muted-foreground print:text-slate-600">{shipment.senderCountry}</p>
                   </div>
                 </Card>
-                <Card title="Receiver">
+                <Card title={tr.receiver}>
                   <div className="space-y-1">
                     <p className="text-base font-black print:text-slate-900">{shipment.receiverFullName}</p>
                     <p className="text-sm text-muted-foreground print:text-slate-600">{shipment.receiverAddress}</p>
@@ -433,12 +446,12 @@ export default function PublicTrackingPage({
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="no-break"
               >
-                <Card title="Shipment Specifications" icon={Package}>
+                <Card title={tr.specs} icon={Package}>
                   <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
                     <div className="sm:border-r sm:pr-6 print:border-slate-200">
-                      <InfoRow label="Service Type" value={shipment.shipmentType} />
+                      <InfoRow label={tr.serviceType} value={shipment.shipmentType} />
                       <InfoRow
-                        label="Total Weight"
+                        label={tr.totalWeight}
                         value={
                           <span className="flex items-center gap-1.5">
                             <Weight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -447,7 +460,7 @@ export default function PublicTrackingPage({
                         }
                       />
                       <InfoRow
-                        label="Dimensions"
+                        label={tr.dimensions}
                         value={
                           <span className="flex items-center gap-1.5">
                             <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
@@ -458,19 +471,19 @@ export default function PublicTrackingPage({
                     </div>
                     <div className="mt-4 sm:mt-0 sm:pl-6">
                       {shipment.dispatchDate && (
-                        <InfoRow label="Dispatch Date" value={shipment.dispatchDate} />
+                        <InfoRow label={tr.dispatchDate} value={shipment.dispatchDate} />
                       )}
                       {shipment.estimatedDeliveryDate && (
-                        <InfoRow label="Est. Delivery" value={shipment.estimatedDeliveryDate} />
+                        <InfoRow label={tr.estDelivery} value={shipment.estimatedDeliveryDate} />
                       )}
                       <InfoRow
-                        label="Current Status"
+                        label={tr.currentStatus}
                         value={
                           <>
                             {/* Screen: colored badge */}
                             <span className="print:hidden"><StatusBadge status={shipment.status} /></span>
                             {/* Print: plain text */}
-                            <span className="hidden print:inline font-black text-slate-900">{shipment.status}</span>
+                            <span className="hidden print:inline font-black text-slate-900">{statusLabel(shipment.status)}</span>
                           </>
                         }
                       />
@@ -487,7 +500,7 @@ export default function PublicTrackingPage({
                   transition={{ duration: 0.5, delay: 0.35 }}
                   className="no-break"
                 >
-                  <Card title={`Package Contents (${shipment.items.length} item${shipment.items.length !== 1 ? "s" : ""})`} icon={Package}>
+                  <Card title={shipment.items.length === 1 ? tr.contentsOne : format(tr.contentsMany, { count: shipment.items.length })} icon={Package}>
                     <div className="space-y-3 print:space-y-1.5">
                       {shipment.items.map((item, i) => (
                         <div key={item._id} className={cn("flex items-start gap-4 print:gap-2 text-sm", i > 0 && "border-t pt-3 print:pt-1.5 print:border-slate-200")}>
@@ -497,7 +510,7 @@ export default function PublicTrackingPage({
                           <div className="flex-1 min-w-0">
                             <p className="font-black print:text-xs print:text-slate-900">{item.description}</p>
                             <p className="text-xs text-muted-foreground mt-0.5 print:text-slate-600">
-                              Qty: {item.quantity} · {item.weight} kg
+                              {format(tr.qty, { quantity: item.quantity })} · {item.weight} kg
                             </p>
                           </div>
                         </div>
@@ -515,7 +528,7 @@ export default function PublicTrackingPage({
                   transition={{ duration: 0.5, delay: 0.4 }}
                   className="no-break"
                 >
-                  <Card title="Recorded Route Updates" icon={MapPin}>
+                  <Card title={tr.routeUpdates} icon={MapPin}>
                     <div className="overflow-x-auto py-1">
                       <div className="flex items-start gap-0 min-w-max">
                         {shipment.checkpoints.map((cp, i) => {
@@ -551,7 +564,7 @@ export default function PublicTrackingPage({
                                 <p className="text-[10px] text-muted-foreground print:text-slate-500">{cp.country}</p>
                                 {cp.arrivalStatus && (
                                   <p className="mt-0.5 text-[10px] font-bold capitalize text-primary print:text-slate-600">
-                                    {cp.arrivalStatus}
+                                    {checkpointLabel(cp.arrivalStatus)}
                                   </p>
                                 )}
                               </div>
@@ -582,7 +595,7 @@ export default function PublicTrackingPage({
                 transition={{ duration: 0.5, delay: 0.45 }}
                 className="qr-print-section no-break"
               >
-                <Card title="Scan & Share">
+                <Card title={tr.scanShare}>
                   <div className="flex flex-col sm:flex-row items-center gap-6 print:gap-3">
                     {/* QR renders as an <img> with data URL — prints correctly */}
                     <div className="shrink-0 print:[&_img]:h-20 print:[&_img]:w-20">
@@ -593,9 +606,9 @@ export default function PublicTrackingPage({
                       />
                     </div>
                     <div className="flex-1 space-y-3 print:space-y-1 text-sm text-center sm:text-left">
-                      <p className="font-black text-base print:text-sm print:text-slate-900">Quick Access QR Code</p>
+                      <p className="font-black text-base print:text-sm print:text-slate-900">{tr.qrTitle}</p>
                       <p className="text-muted-foreground leading-6 print:hidden print:text-slate-600">
-                        Scan this code with any phone camera to open this tracking page instantly — no typing required.
+                        {tr.qrText}
                       </p>
                       <p className="font-mono text-xs break-all text-muted-foreground print:text-slate-500">{trackingUrl}</p>
                       {/* Download PDF button — hidden in print */}
@@ -604,7 +617,7 @@ export default function PublicTrackingPage({
                         className="qr-download-btn print:hidden inline-flex items-center gap-2 rounded-xl bg-brand-forest px-5 py-2.5 text-sm font-black text-white hover:bg-brand-forest/90 transition-colors"
                       >
                         <Download className="h-4 w-4" />
-                        Download as PDF
+                        {tr.downloadAsPdf}
                       </button>
                     </div>
                   </div>
@@ -620,7 +633,7 @@ export default function PublicTrackingPage({
             <Package className="h-4 w-4" />
             <span className="font-black">Diplomaxdelivery</span>
           </div>
-          <p>© {new Date().getFullYear()} Diplomaxdelivery · Global Courier & Logistics</p>
+          <p>{format(tr.footer, { year: new Date().getFullYear() })}</p>
         </footer>
       </main>
     </>

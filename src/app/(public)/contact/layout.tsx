@@ -1,3 +1,4 @@
 import type { Metadata } from "next";
-export const metadata: Metadata = { title: "Get in touch", description: "Contact Diplomaxdelivery for shipment questions, delivery planning, and partnership enquiries." };
+import { getDictionary, getLocale } from "@/i18n/server";
+export async function generateMetadata(): Promise<Metadata> { const { meta } = getDictionary(await getLocale()); return meta.contact; }
 export default function ContactLayout({ children }: { children: React.ReactNode }) { return children; }

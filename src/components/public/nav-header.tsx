@@ -7,12 +7,14 @@ import { useTheme } from "next-themes";
 import { Menu, Moon, Search, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
+import { LanguageSwitcher } from "@/components/public/language-switcher";
+import { useI18n } from "@/i18n/provider";
 
 const NAV_LINKS = [
-  { href: "/services", label: "Services" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
+  { href: "/services", key: "services" },
+  { href: "/about", key: "about" },
+  { href: "/contact", key: "contact" },
+] as const;
 
 function Brand() {
   return <Logo height={36} />;
@@ -22,11 +24,12 @@ export function NavHeader() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 shadow-[0_10px_35px_rgba(7,22,45,0.06)] backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="shrink-0" aria-label="Diplomaxdelivery home">
+        <Link href="/" className="shrink-0" aria-label={t.nav.homeLabel}>
           <Brand />
         </Link>
 
@@ -42,18 +45,20 @@ export function NavHeader() {
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              {link.label}
+              {t.nav[link.key]}
             </Link>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+
           <button
             onClick={() =>
               setTheme(resolvedTheme === "dark" ? "light" : "dark")
             }
             className="grid h-10 w-10 place-items-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
-            aria-label="Toggle theme"
+            aria-label={t.nav.toggleTheme}
           >
             {resolvedTheme === "dark" ? (
               <Sun className="h-4 w-4" />
@@ -67,13 +72,13 @@ export function NavHeader() {
             className="hidden items-center gap-2 rounded-lg bg-brand-lime px-4 py-2.5 text-sm font-extrabold text-slate-950 shadow-sm transition-transform hover:-translate-y-0.5 md:inline-flex"
           >
             <Search className="h-4 w-4" />
-            Track
+            {t.nav.track}
           </Link>
 
           <button
             className="grid h-10 w-10 place-items-center rounded-lg border bg-card md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Toggle menu" aria-expanded={mobileOpen} aria-controls="mobile-navigation"
+            aria-label={t.nav.toggleMenu} aria-expanded={mobileOpen} aria-controls="mobile-navigation"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -90,7 +95,7 @@ export function NavHeader() {
                 className="block rounded-lg px-3 py-3 text-sm font-semibold hover:bg-muted"
                 onClick={() => setMobileOpen(false)}
               >
-                {link.label}
+                {t.nav[link.key]}
               </Link>
             ))}
             <Link
@@ -99,7 +104,7 @@ export function NavHeader() {
               onClick={() => setMobileOpen(false)}
             >
               <Search className="h-4 w-4" />
-              Track Package
+              {t.nav.trackPackage}
             </Link>
           </div>
         </div>
